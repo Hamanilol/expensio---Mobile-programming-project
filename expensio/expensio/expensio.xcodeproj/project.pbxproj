@@ -92,6 +92,7 @@
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 2660;
 				LastUpgradeCheck = 2660;
+				ORGANIZATIONNAME = polytechnic;
 				TargetAttributes = {
 					579FBA78302DCE4D00EB6407 = {
 						CreatedOnToolsVersion = 26.6;
@@ -104,6 +105,8 @@
 			knownRegions = (
 				en,
 				Base,
+				Screens,
+				screens,
 			);
 			mainGroup = 579FBA70302DCE4D00EB6407;
 			minimizedProjectReferenceProxies = 1;
@@ -158,7 +161,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = Polytechnic.expensio;
+				PRODUCT_BUNDLE_IDENTIFIER = com.polytechic.expensio;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -190,7 +193,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = Polytechnic.expensio;
+				PRODUCT_BUNDLE_IDENTIFIER = com.polytechic.expensio;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
