@@ -1,17 +1,10 @@
 import UIKit
 
-/// Uploads receipt photos to Cloudinary using an *unsigned* upload preset.
-///
-/// Unsigned uploads are a plain `multipart/form-data` POST — no SDK or secret
-/// key required on the client, which is the right approach for a mobile app
-/// (never embed your Cloudinary API *secret* in client code). The returned
-/// `secure_url` is what gets stored on the Expense document in Firestore.
-///
-/// ⚠️ Setup requirement: `uploadPreset` below must be configured as
-/// **Unsigned** in the Cloudinary console (Settings → Upload → Upload
-/// presets). Cloudinary's default preset, "ml_default", is *signed* out of
-/// the box — if uploads fail with a 401, go flip its Signing Mode to
-/// Unsigned (or create a new preset dedicated to this app).
+// Uploads receipt photos to Cloudinary using an unsigned upload preset
+// (no SDK or secret key needed on the client).
+//
+// Setup: uploadPreset must be set to Unsigned in the Cloudinary console
+// (Settings → Upload → Upload presets), or uploads will fail with a 401.
 final class CloudinaryService {
 
     static let shared = CloudinaryService()
@@ -24,13 +17,15 @@ final class CloudinaryService {
         URL(string: "https://api.cloudinary.com/v1_1/\(cloudName)/image/upload")!
     }
 
-    /// Uploads a UIImage and returns the hosted image's secure (https) URL.
+    // Uploads an image and returns its hosted secure URL.
     func uploadImage(_ image: UIImage, completion: @escaping (Result<String, Error>) -> Void) {
+        // Compress to JPEG before uploading.
         guard let imageData = image.jpegData(compressionQuality: 0.8) else {
             completion(.failure(CloudinaryServiceError.invalidImage))
             return
         }
 
+        // Build the multipart POST request.
         let boundary = "Boundary-\(UUID().uuidString)"
         var request = URLRequest(url: uploadURL)
         request.httpMethod = "POST"
@@ -42,6 +37,7 @@ final class CloudinaryService {
                 completion(.failure(error))
                 return
             }
+            // Check for a successful HTTP status.
             guard
                 let data,
                 let httpResponse = response as? HTTPURLResponse,
@@ -51,6 +47,7 @@ final class CloudinaryService {
                 return
             }
 
+            // Parse out the secure_url field.
             do {
                 guard
                     let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
@@ -66,7 +63,7 @@ final class CloudinaryService {
         }.resume()
     }
 
-    // MARK: - Multipart body construction
+    // MARK: - Multipart body
 
     private func multipartBody(imageData: Data, boundary: String) -> Data {
         var body = Data()
@@ -75,18 +72,19 @@ final class CloudinaryService {
             body.append(string.data(using: .utf8)!)
         }
 
-        // upload_preset field
+        // upload_preset field.
         append("--\(boundary)\r\n")
         append("Content-Disposition: form-data; name=\"upload_preset\"\r\n\r\n")
         append("\(uploadPreset)\r\n")
 
-        // file field
+        // file field.
         append("--\(boundary)\r\n")
         append("Content-Disposition: form-data; name=\"file\"; filename=\"receipt.jpg\"\r\n")
         append("Content-Type: image/jpeg\r\n\r\n")
         body.append(imageData)
         append("\r\n")
 
+        // Closing boundary.
         append("--\(boundary)--\r\n")
 
         return body

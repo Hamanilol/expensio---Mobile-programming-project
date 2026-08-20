@@ -17,19 +17,23 @@ class LoginViewController: UIViewController {
         super.viewDidLoad()
     }
 
+    // Flips secure text entry and swaps the eye icon.
     @IBAction func togglePasswordVisibility(_ sender: UIButton) {
         passwordTextField.isSecureTextEntry.toggle()
         let symbolName = passwordTextField.isSecureTextEntry ? "eye" : "eye.slash"
         sender.setImage(UIImage(systemName: symbolName), for: .normal)
     }
 
+    // Only navigates to the tab bar after Firebase confirms sign-in succeeded.
     @IBAction func signInTapped(_ sender: UIButton) {
+        // Validate both fields are filled in.
         guard let email = emailTextField.text?.trimmingCharacters(in: .whitespaces), !email.isEmpty,
               let password = passwordTextField.text, !password.isEmpty else {
             presentAlert(title: "Missing information", message: "Please enter both your email and password.")
             return
         }
 
+        // Attempt sign in.
         setLoading(true)
         AuthService.shared.signIn(email: email, password: password) { [weak self] result in
             DispatchQueue.main.async {
@@ -46,11 +50,12 @@ class LoginViewController: UIViewController {
     }
 
     @IBAction func createAccountTapped(_ sender: UIButton) {
-        // Storyboard segue (Login → SignUp) handles this automatically.
+        // Storyboard segue handles navigation to Sign Up.
     }
 
     // MARK: - Helpers
 
+    // Disables the button and dims it while a request is in flight.
     private func setLoading(_ isLoading: Bool) {
         signInButton.isEnabled = !isLoading
         signInButton.alpha = isLoading ? 0.6 : 1.0

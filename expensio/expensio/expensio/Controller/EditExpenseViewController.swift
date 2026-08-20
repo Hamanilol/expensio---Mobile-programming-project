@@ -1,12 +1,12 @@
 import UIKit
 
-// Notifies the presenting screen that a new expense was saved.
-protocol AddExpenseViewControllerDelegate: AnyObject {
-    func addExpenseViewController(_ controller: AddExpenseViewController, didSave expense: Expense)
+// Notifies the presenting screen that an edit was saved.
+protocol EditExpenseViewControllerDelegate: AnyObject {
+    func editExpenseViewController(_ controller: EditExpenseViewController, didSave expense: Expense)
 }
 
-// Screen for creating a new expense. Editing uses the separate EditExpenseViewController.
-class AddExpenseViewController: UIViewController {
+// Screen for editing an existing expense, set by ExpenseDetailViewController before this appears.
+class EditExpenseViewController: UIViewController {
 
     @IBOutlet weak var backButton: UIButton!
     @IBOutlet weak var saveButton: UIButton!
@@ -26,17 +26,20 @@ class AddExpenseViewController: UIViewController {
     @IBOutlet weak var receiptButton: UIButton!
     @IBOutlet weak var saveExpenseButton: UIButton!
 
-    weak var delegate: AddExpenseViewControllerDelegate?
+    var expense: Expense!
+    weak var delegate: EditExpenseViewControllerDelegate?
 
     private var selectedCategory: ExpenseCategory = .food
     private var pickedReceiptImage: UIImage?
+    // True if the user tapped remove on the existing receipt.
+    private var removeExistingReceipt = false
 
     private weak var removeReceiptButton: UIButton?
     private var didSetupRemoveButton = false
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        updateCategoryButtonStyles()
+        populateFields()
     }
 
     override func viewDidLayoutSubviews() {
@@ -58,7 +61,7 @@ class AddExpenseViewController: UIViewController {
     @IBAction func dateChanged(_ sender: UIDatePicker) {
     }
 
-    // Small circular "X" button overlaid on the receipt button's corner.
+    // Builds the small "remove receipt" button overlaid on receiptButton, hidden until needed.
     private func setupRemoveReceiptButton() {
         let btn = UIButton(type: .system)
         btn.setImage(UIImage(systemName: "xmark.circle.fill"), for: .normal)
@@ -74,12 +77,28 @@ class AddExpenseViewController: UIViewController {
 
     @objc private func removeReceiptTapped() {
         pickedReceiptImage = nil
+        removeExistingReceipt = true
         receiptButton.setTitle("Attach Receipt", for: .normal)
         removeReceiptButton?.isHidden = true
     }
 
     private func showRemoveButton() {
         removeReceiptButton?.isHidden = false
+    }
+
+    // Fills every field from the expense being edited.
+    private func populateFields() {
+        amountTextField.text = String(format: "%.2f", expense.amount)
+        titleDescriptionTextField.text = expense.title
+        selectedCategory = expense.category
+        datePicker.date = expense.date
+        updateCategoryButtonStyles()
+
+        // Show the existing receipt state, if any.
+        if expense.receiptImageURL != nil {
+            receiptButton.setTitle("Receipt attached · Tap to change", for: .normal)
+            showRemoveButton()
+        }
     }
 
     // MARK: - Actions
@@ -109,7 +128,7 @@ class AddExpenseViewController: UIViewController {
         present(picker, animated: true)
     }
 
-    // Validates, uploads a photo if needed, then saves the expense.
+    // Validates, uploads a new photo if needed, then saves the changes.
     @IBAction func saveTapped(_ sender: UIButton) {
         // Validate amount.
         guard let amountText = amountTextField.text?.trimmingCharacters(in: .whitespaces),
@@ -125,8 +144,8 @@ class AddExpenseViewController: UIViewController {
 
         setSaving(true)
 
-        // Upload the photo first if one was picked, then save.
         if let pickedReceiptImage {
+            // Upload the new photo first, then save with the resulting URL.
             CloudinaryService.shared.uploadImage(pickedReceiptImage) { [weak self] result in
                 switch result {
                 case .success(let url):
@@ -139,28 +158,30 @@ class AddExpenseViewController: UIViewController {
                 }
             }
         } else {
-            saveExpense(title: title, amount: amount, receiptImageURL: nil)
+            // Keep the existing receipt URL unless the user tapped remove.
+            let urlToSave = removeExistingReceipt ? nil : expense.receiptImageURL
+            saveExpense(title: title, amount: amount, receiptImageURL: urlToSave)
         }
     }
 
     // MARK: - Save
 
-    // Builds the Expense and writes it to the database.
+    // Applies the edited fields to the expense and writes it to the database.
     private func saveExpense(title: String, amount: Double, receiptImageURL: String?) {
-        let expense = Expense(
-            id: nil, title: title, amount: amount, category: selectedCategory,
-            date: datePicker.date, receiptImageURL: receiptImageURL, createdAt: nil
-        )
+        var updated = expense!
+        updated.title = title
+        updated.amount = amount
+        updated.category = selectedCategory
+        updated.date = datePicker.date
+        updated.receiptImageURL = receiptImageURL
 
-        DatabaseService.shared.addExpense(expense) { [weak self] result in
+        DatabaseService.shared.updateExpense(updated) { [weak self] result in
             DispatchQueue.main.async {
                 guard let self else { return }
                 self.setSaving(false)
                 switch result {
-                case .success(let newId):
-                    var savedExpense = expense
-                    savedExpense.id = newId
-                    self.delegate?.addExpenseViewController(self, didSave: savedExpense)
+                case .success:
+                    self.delegate?.editExpenseViewController(self, didSave: updated)
                     self.dismiss(animated: true)
                 case .failure(let error):
                     self.presentAlert(title: "Couldn't save expense", message: error.localizedDescription)
@@ -206,12 +227,13 @@ class AddExpenseViewController: UIViewController {
 
 // MARK: - UIImagePickerControllerDelegate
 
-extension AddExpenseViewController: UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+extension EditExpenseViewController: UIImagePickerControllerDelegate, UINavigationControllerDelegate {
 
     func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
         picker.dismiss(animated: true)
         guard let image = info[.originalImage] as? UIImage else { return }
         pickedReceiptImage = image
+        removeExistingReceipt = false
         receiptButton.setTitle("Receipt attached · Tap to change", for: .normal)
         showRemoveButton()
     }

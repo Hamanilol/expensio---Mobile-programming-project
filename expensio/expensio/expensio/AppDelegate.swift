@@ -6,7 +6,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     func application(_ application: UIApplication,
                       didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Must run before any FirebaseAuth / Firestore call anywhere in the app.
         FirebaseApp.configure()
         return true
     }

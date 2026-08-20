@@ -34,7 +34,7 @@ class ExpensesViewController: UIViewController {
     private var expensesListener: DatabaseObserver?
     private var selectedExpense: Expense?
 
-    // Programmatically-added filter controls
+    // Programmatically-added filter controls (not in the storyboard).
     private var healthFilterButton: UIButton?
     private var otherFilterButton: UIButton?
     private var monthFilterButtons: [UIButton] = []
@@ -56,7 +56,7 @@ class ExpensesViewController: UIViewController {
 
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
-        // Run once after the storyboard frames have been applied
+        // Run once after the storyboard frames have been applied.
         if !didSetupMonthFilter {
             didSetupMonthFilter = true
             setupMonthFilter()
@@ -70,12 +70,14 @@ class ExpensesViewController: UIViewController {
 
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
+        // Stop listening while this screen isn't visible.
         expensesListener?.remove()
         expensesListener = nil
     }
 
     // MARK: - Setup
 
+    // Shows the signed-in user's name (or email as a fallback) and the current month.
     private func configureHeader() {
         let user = Auth.auth().currentUser
         userNameLabel.text = user?.displayName?.isEmpty == false
@@ -95,6 +97,7 @@ class ExpensesViewController: UIViewController {
 
     // MARK: - Category chips (Health + Other; storyboard has All/Food/Transport/Bills/Shopping)
 
+    // Adds two extra chips after the storyboard's own five.
     private func addMissingCategoryChips() {
         // Storyboard Shopping button: x=320, w=90 → right edge at 410.
         // Health starts at 418, Other at 502.
@@ -112,6 +115,7 @@ class ExpensesViewController: UIViewController {
         categoryFilterScrollView.addSubview(otherBtn)
         otherFilterButton = otherBtn
 
+        // Widen the scroll content to fit all 7 chips.
         categoryFilterScrollView.contentSize = CGSize(width: 580, height: 36)
     }
 
@@ -121,6 +125,7 @@ class ExpensesViewController: UIViewController {
         applyFilters()
     }
 
+    // Shared factory so both extra chips look identical to the storyboard's own.
     private func makeChip(title: String) -> UIButton {
         let button = UIButton(type: .system)
         button.setTitle(title, for: .normal)
@@ -134,10 +139,12 @@ class ExpensesViewController: UIViewController {
 
     // MARK: - Month filter row (built entirely in code, matches Figma design)
 
+    // Builds a second scrolling chip row (All + Jan–Dec) below the category row.
     private func setupMonthFilter() {
         let filterFrame = categoryFilterScrollView.frame   // x=24, y=279, w=342, h=36
-        let monthRowY = filterFrame.maxY + 8              // 8pt gap below category row
+        let monthRowY = filterFrame.maxY + 8                // 8pt gap below category row
 
+        // Container scroll view for the month chips.
         let monthScroll = UIScrollView()
         monthScroll.showsHorizontalScrollIndicator = false
         monthScroll.backgroundColor = .clear
@@ -145,7 +152,7 @@ class ExpensesViewController: UIViewController {
                                    width: filterFrame.width, height: 32)
         view.addSubview(monthScroll)
 
-        // Small caps "MONTH" label matching the Figma row header
+        // "MONTH" row header label.
         let headerLabel = UILabel()
         headerLabel.text = "MONTH"
         headerLabel.font = .systemFont(ofSize: 10, weight: .semibold)
@@ -153,7 +160,7 @@ class ExpensesViewController: UIViewController {
         headerLabel.frame = CGRect(x: 0, y: 7, width: 52, height: 18)
         monthScroll.addSubview(headerLabel)
 
-        // "All" + Jan–Dec chips
+        // Build "All" + Jan–Dec chips left to right.
         let monthNames = ["All", "Jan", "Feb", "Mar", "Apr", "May",
                           "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
         var xCursor: CGFloat = 60
@@ -175,7 +182,7 @@ class ExpensesViewController: UIViewController {
 
         monthScroll.contentSize = CGSize(width: xCursor, height: 32)
 
-        // Push the table view down to make room (month row 32pt + 8pt gap = 40pt total)
+        // Push the table view down and shrink it to make room for the new row.
         let newTableY = monthScroll.frame.maxY + 8
         let oldTableMaxY = expensesTableView.frame.maxY
         expensesTableView.frame = CGRect(
@@ -196,6 +203,7 @@ class ExpensesViewController: UIViewController {
 
     // MARK: - Data
 
+    // Subscribes to live updates so the list refreshes automatically after any change.
     private func startObservingExpenses() {
         expensesListener = DatabaseService.shared.observeExpenses { [weak self] result in
             DispatchQueue.main.async {
@@ -211,6 +219,7 @@ class ExpensesViewController: UIViewController {
         }
     }
 
+    // Applies category, search, and month filters together, then reloads the table.
     private func applyFilters() {
         filteredExpenses = allExpenses.filter { expense in
             let matchesCategory = selectedCategory == nil || expense.category == selectedCategory
@@ -228,6 +237,7 @@ class ExpensesViewController: UIViewController {
         updateTotalSpentLabel()
     }
 
+    // Total for the current calendar month, independent of any active filters.
     private func updateTotalSpentLabel() {
         let calendar = Calendar.current
         let now = Date()
@@ -239,6 +249,7 @@ class ExpensesViewController: UIViewController {
 
     // MARK: - Actions
 
+    // Signs out, then swaps the window's root view controller back to Login.
     @IBAction func logoutTapped(_ sender: UIButton) {
         do {
             try AuthService.shared.signOut()
@@ -252,6 +263,7 @@ class ExpensesViewController: UIViewController {
         }
     }
 
+    // Handles the 5 storyboard category chips (the 2 extra ones use extraCategoryTapped).
     @IBAction func filterTapped(_ sender: UIButton) {
         switch sender {
         case allFilterButton: selectedCategory = nil
@@ -266,17 +278,18 @@ class ExpensesViewController: UIViewController {
     }
 
     @IBAction func addExpenseTapped(_ sender: UIButton) {
-        // Storyboard segue triggers presentation of AddExpenseViewController
+        // Storyboard segue triggers presentation of AddExpenseViewController.
     }
 
     // MARK: - Chip styling
 
+    // Highlights whichever category chip is currently selected.
     private func updateFilterButtonStyles() {
         let active = UIColor(red: 0.267, green: 0.439, blue: 0.745, alpha: 1)
         let inactive = UIColor(red: 0.1, green: 0.12, blue: 0.18, alpha: 1)
         let inactiveText = UIColor(red: 0.75, green: 0.78, blue: 0.82, alpha: 1)
 
-        // Storyboard category chips
+        // Storyboard category chips.
         let storyboardChips: [(UIButton, ExpenseCategory?)] = [
             (allFilterButton, nil),
             (foodFilterButton, .food),
@@ -290,7 +303,7 @@ class ExpensesViewController: UIViewController {
             btn.setTitleColor(on ? active : inactiveText, for: .normal)
         }
 
-        // Programmatic category chips
+        // Programmatic category chips.
         let extraChips: [(UIButton?, ExpenseCategory)] = [
             (healthFilterButton, .health),
             (otherFilterButton, .other)
@@ -305,6 +318,7 @@ class ExpensesViewController: UIViewController {
         updateMonthButtonStyles()
     }
 
+    // Highlights whichever month chip is currently selected.
     private func updateMonthButtonStyles() {
         let active = UIColor(red: 0.267, green: 0.439, blue: 0.745, alpha: 1)
         let inactive = UIColor(red: 0.1, green: 0.12, blue: 0.18, alpha: 1)
@@ -338,12 +352,14 @@ extension ExpensesViewController: UITableViewDataSource, UITableViewDelegate {
         return cell
     }
 
+    // Stashes the tapped expense, then triggers the detail segue.
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
         selectedExpense = filteredExpenses[indexPath.row]
         performSegue(withIdentifier: "ShowExpenseDetail", sender: nil)
     }
 
+    // Passes the selected expense to ExpenseDetailViewController.
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
         if segue.identifier == "ShowExpenseDetail",
            let detailVC = segue.destination as? ExpenseDetailViewController {
@@ -358,14 +374,14 @@ extension ExpensesViewController: UITableViewDataSource, UITableViewDelegate {
 extension ExpensesViewController: ExpenseDetailViewControllerDelegate, AddExpenseViewControllerDelegate {
 
     func expenseDetailViewController(_ controller: ExpenseDetailViewController, didUpdate expense: Expense) {
-        // Live Firestore listener refreshes the list automatically
+        // Live listener refreshes the list automatically.
     }
 
     func expenseDetailViewController(_ controller: ExpenseDetailViewController, didDelete expense: Expense) {
-        // Live Firestore listener refreshes the list automatically
+        // Live listener refreshes the list automatically.
     }
 
     func addExpenseViewController(_ controller: AddExpenseViewController, didSave expense: Expense) {
-        // Live Firestore listener refreshes the list automatically
+        // Live listener refreshes the list automatically.
     }
 }

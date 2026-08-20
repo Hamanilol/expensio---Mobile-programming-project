@@ -24,12 +24,15 @@ class ExpenseTableViewCell: UITableViewCell {
         super.awakeFromNib()
     }
 
+    // Fills the cell's labels, icon, and colors from one expense.
     func configure(with expense: Expense) {
+        // Text fields.
         titleLabel.text = expense.title
         categoryLabel.text = expense.category.rawValue
         dateLabel.text = Self.dateFormatter.string(from: expense.date)
         amountLabel.text = String(format: "$%.2f", expense.amount)
 
+        // Category color and icon.
         let color = expense.category.accentColor
         iconImageView.image = UIImage(systemName: expense.category.iconName)
         iconImageView.tintColor = color
@@ -37,6 +40,7 @@ class ExpenseTableViewCell: UITableViewCell {
         categoryLabel.textColor = color
         categoryBadgeView.backgroundColor = color.withAlphaComponent(0.18)
 
+        // Receipt indicator, shown only when a photo is attached.
         receiptIconImageView.isHidden = (expense.receiptImageURL == nil)
     }
 }

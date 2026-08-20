@@ -16,7 +16,7 @@ class SignUpViewController: UIViewController {
 
     @IBOutlet weak var createAccountButton: UIButton!
 
-    private var termsAccepted = true // matches the storyboard's default checked state
+    private var termsAccepted = true
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -26,6 +26,7 @@ class SignUpViewController: UIViewController {
         dismiss(animated: true)
     }
 
+    // Flips the checkbox state and swaps its icon.
     @IBAction func toggleTermsCheckbox(_ sender: UIButton) {
         termsAccepted.toggle()
         let symbolName = termsAccepted ? "checkmark.square.fill" : "square"
@@ -33,27 +34,33 @@ class SignUpViewController: UIViewController {
     }
 
     @IBAction func createAccountTapped(_ sender: UIButton) {
+        // Validate full name.
         guard let fullName = fullNameTextField.text?.trimmingCharacters(in: .whitespaces), !fullName.isEmpty else {
             presentAlert(title: "Missing name", message: "Please enter your full name.")
             return
         }
+        // Validate email.
         guard let email = emailTextField.text?.trimmingCharacters(in: .whitespaces), !email.isEmpty else {
             presentAlert(title: "Missing email", message: "Please enter your email address.")
             return
         }
+        // Validate password length.
         guard let password = passwordTextField.text, password.count >= 6 else {
             presentAlert(title: "Weak password", message: "Password must be at least 6 characters.")
             return
         }
+        // Confirms password match.
         guard password == confirmPasswordTextField.text else {
             presentAlert(title: "Passwords don't match", message: "Please make sure both password fields match.")
             return
         }
+        // Validate terms were accepted.
         guard termsAccepted else {
             presentAlert(title: "Terms required", message: "Please agree to the Terms of Service and Privacy Policy to continue.")
             return
         }
 
+        // Create the account.
         setLoading(true)
         AuthService.shared.signUp(fullName: fullName, email: email, password: password) { [weak self] result in
             DispatchQueue.main.async {

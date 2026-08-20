@@ -1,7 +1,7 @@
 import Foundation
 import FirebaseDatabase
 
-/// The fixed category set required by the assessment brief.
+// Fixed expense categories.
 enum ExpenseCategory: String, CaseIterable, Codable {
     case food = "Food"
     case transport = "Transport"
@@ -10,6 +10,7 @@ enum ExpenseCategory: String, CaseIterable, Codable {
     case health = "Health"
     case other = "Other"
 
+    // SF Symbol shown for this category.
     var iconName: String {
         switch self {
         case .food: return "fork.knife"
@@ -22,19 +23,7 @@ enum ExpenseCategory: String, CaseIterable, Codable {
     }
 }
 
-/// Model representing a single expense.
-///
-/// Realtime Database node shape (at `users/{uid}/expenses/{id}`):
-/// ```
-/// {
-///   "title": "Blue Bottle Coffee",
-///   "amount": 14.50,
-///   "category": "Food",
-///   "date": 1753000000.0,       // Unix timestamp (seconds)
-///   "receiptImageURL": "https://res.cloudinary.com/.../receipt.jpg",
-///   "createdAt": 1753000000.0   // Unix timestamp (seconds)
-/// }
-/// ```
+// A single expense. Stored at users/{uid}/expenses/{id} in Realtime Database.
 struct Expense: Codable, Identifiable {
     var id: String?
     var title: String
@@ -46,7 +35,9 @@ struct Expense: Codable, Identifiable {
 
     // MARK: - Realtime Database conversion
 
+    // Converts to a dictionary for setValue(_:). Dates stored as Unix timestamps.
     func asDictionary() -> [String: Any] {
+        // Required fields.
         var dict: [String: Any] = [
             "title": title,
             "amount": amount,
@@ -54,15 +45,16 @@ struct Expense: Codable, Identifiable {
             "date": date.timeIntervalSince1970,
             "createdAt": createdAt?.timeIntervalSince1970 ?? Date().timeIntervalSince1970
         ]
+        // Optional receipt URL.
         if let receiptImageURL {
             dict["receiptImageURL"] = receiptImageURL
         }
         return dict
     }
 
-    /// Builds an Expense from a Realtime Database DataSnapshot.
-    /// Returns nil if required fields are missing/malformed.
+    // Builds an Expense from a database snapshot. Returns nil if a required field is missing.
     static func from(snapshot: DataSnapshot) -> Expense? {
+        // Unwrap required fields; bail out if anything's missing or the wrong type.
         guard
             let data = snapshot.value as? [String: Any],
             let title = data["title"] as? String,
@@ -72,9 +64,11 @@ struct Expense: Codable, Identifiable {
             let dateInterval = data["date"] as? Double
         else { return nil }
 
+        // Optional fields.
         let receiptImageURL = data["receiptImageURL"] as? String
         let createdAtInterval = data["createdAt"] as? Double
 
+        // Build the Expense, using the snapshot's key as the id.
         return Expense(
             id: snapshot.key,
             title: title,

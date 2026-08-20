@@ -1,7 +1,6 @@
 import UIKit
 
-/// UIKit-specific appearance for ExpenseCategory, kept in its own file so the
-/// core Expense/ExpenseCategory model (Models/Expense.swift) stays UIKit-free.
+// Colors for each category, used across cells, badges, and progress bars.
 extension ExpenseCategory {
     var accentColor: UIColor {
         switch self {

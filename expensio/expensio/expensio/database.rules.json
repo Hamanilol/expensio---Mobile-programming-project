@@ -1,0 +1,18 @@
+{
+  "rules": {
+    "users": {
+      "$uid": {
+        "expenses": {
+          ".read": "auth != null && auth.uid === $uid",
+          ".write": "auth != null && auth.uid === $uid"
+        },
+        "$other": {
+          ".read": false,
+          ".write": false
+        }
+      },
+      ".read": false,
+      ".write": false
+    }
+  }
+}

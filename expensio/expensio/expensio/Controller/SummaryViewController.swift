@@ -34,9 +34,7 @@ class SummaryViewController: UIViewController {
     private var allExpenses: [Expense] = []
     private var displayedMonth: Date = Date()
 
-    /// Categories shown as individual rows on this screen. "Other" isn't
-    /// broken out separately (no row for it in the design), but its amount
-    /// still counts toward the overall total above.
+    // Categories shown as individual rows
     private static let summaryCategories: [ExpenseCategory] = [.transport, .bills, .food, .shopping, .health]
 
     private static let monthYearFormatter: DateFormatter = {
@@ -45,8 +43,7 @@ class SummaryViewController: UIViewController {
         return formatter
     }()
 
-    /// Baseline (bottom) y-position and max height for the weekly bars,
-    /// matching the frames laid out in the storyboard's weekContainer.
+    // Baseline y-position and max height for the weekly bars.
     private let weekBarBaselineY: CGFloat = 110
     private let weekBarMaxHeight: CGFloat = 90
     private let weekBarMinHeight: CGFloat = 4
@@ -62,6 +59,7 @@ class SummaryViewController: UIViewController {
 
     // MARK: - Data
 
+    // One-time fetch of all expenses
     private func loadExpenses() {
         DatabaseService.shared.fetchExpenses { [weak self] result in
             DispatchQueue.main.async {
@@ -93,6 +91,7 @@ class SummaryViewController: UIViewController {
 
     // MARK: - Computation + UI refresh
 
+    // Recomputes and repaints everything for the displayed month.
     private func refreshUI() {
         monthLabel.text = Self.monthYearFormatter.string(from: displayedMonth)
 
@@ -110,6 +109,7 @@ class SummaryViewController: UIViewController {
         return allExpenses.filter { calendar.isDate($0.date, equalTo: month, toGranularity: .month) }
     }
 
+    // Computes "up/down X% vs last month".
     private func updatePercentChange(currentTotal: Double) {
         guard let previousMonth = Calendar.current.date(byAdding: .month, value: -1, to: displayedMonth) else {
             percentChangeLabel.text = ""
@@ -117,6 +117,7 @@ class SummaryViewController: UIViewController {
         }
         let previousTotal = expenses(in: previousMonth).reduce(0) { $0 + $1.amount }
 
+        // Avoid dividing by zero when there's no prior spending to compare against.
         guard previousTotal > 0 else {
             percentChangeLabel.text = currentTotal > 0 ? "No spending last month to compare" : "No spending this month"
             return
@@ -127,6 +128,7 @@ class SummaryViewController: UIViewController {
         percentChangeLabel.text = String(format: "%@ %.0f%% vs last month", arrow, abs(percentChange))
     }
 
+    // Sums each category and sizes its progress bar relative to the busiest one.
     private func updateCategoryBreakdown(for expenses: [Expense]) {
         var totals: [ExpenseCategory: Double] = [:]
         for expense in expenses {
@@ -151,12 +153,12 @@ class SummaryViewController: UIViewController {
         }
     }
 
-    /// Splits the displayed month into 4 week-ish buckets (days 1-7, 8-14,
-    /// 15-21, 22-end) and sizes each bar relative to the busiest week.
+    // Splits the month into 4 buckets and sizes each bar relative to the busiest one.
     private func updateWeeklyBreakdown(for expenses: [Expense]) {
         let calendar = Calendar.current
         var weekTotals = [Double](repeating: 0, count: 4)
 
+        // Bucket each expense into a week based on its day of month.
         for expense in expenses {
             let day = calendar.component(.day, from: expense.date)
             let weekIndex = min((day - 1) / 7, 3)
@@ -166,6 +168,7 @@ class SummaryViewController: UIViewController {
         let maxWeekTotal = weekTotals.max() ?? 0
         let bars = [week1Bar, week2Bar, week3Bar, week4Bar]
 
+        // Resize each bar proportionally, anchored to the baseline.
         for (index, bar) in bars.enumerated() {
             guard let bar else { continue }
             let ratio = maxWeekTotal > 0 ? CGFloat(weekTotals[index] / maxWeekTotal) : 0

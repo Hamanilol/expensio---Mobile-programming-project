@@ -2,8 +2,7 @@ import Foundation
 import FirebaseDatabase
 import FirebaseAuth
 
-/// Wraps a Firebase Realtime Database observer so callers can cancel it
-/// with the same `.remove()` call pattern used throughout the app.
+// Wraps a Realtime Database observer so it can be cancelled with .remove().
 final class DatabaseObserver {
     private let ref: DatabaseReference
     private let handle: DatabaseHandle
@@ -18,11 +17,8 @@ final class DatabaseObserver {
     }
 }
 
-/// Handles all Realtime Database reads/writes for expenses.
-///
-/// Data lives at `users/{uid}/expenses/{expenseId}`.
-/// Each user's data is isolated under their own uid node, so one user
-/// can never read or write another user's expenses.
+// Handles all Realtime Database reads/writes for expenses.
+// Data lives at users/{uid}/expenses/{id}, scoped to the signed-in user.
 final class DatabaseService {
 
     static let shared = DatabaseService()
@@ -30,6 +26,7 @@ final class DatabaseService {
 
     private var db: DatabaseReference { Database.database().reference() }
 
+    // Reference to the current user's expenses node; nil if not signed in.
     private var expensesRef: DatabaseReference? {
         guard let uid = Auth.auth().currentUser?.uid else { return nil }
         return db.child("users").child(uid).child("expenses")
@@ -42,6 +39,7 @@ final class DatabaseService {
             completion(.failure(DatabaseServiceError.notAuthenticated))
             return
         }
+        // Generate a new auto-id, then write the expense under it.
         let newRef = ref.childByAutoId()
         guard let id = newRef.key else {
             completion(.failure(DatabaseServiceError.unknown))
@@ -63,6 +61,7 @@ final class DatabaseService {
             completion(.failure(DatabaseServiceError.notAuthenticated))
             return
         }
+        // One-time fetch of all expenses.
         ref.observeSingleEvent(of: .value) { snapshot in
             let expenses = Self.parseExpenses(from: snapshot)
             completion(.success(expenses))
@@ -79,6 +78,7 @@ final class DatabaseService {
             onChange(.failure(DatabaseServiceError.notAuthenticated))
             return nil
         }
+        // Live listener — fires again on every change.
         let handle = ref.observe(.value) { snapshot in
             let expenses = Self.parseExpenses(from: snapshot)
             onChange(.success(expenses))
@@ -91,6 +91,7 @@ final class DatabaseService {
     // MARK: - Update
 
     func updateExpense(_ expense: Expense, completion: @escaping (Result<Void, Error>) -> Void) {
+        // Needs an id — nothing to update otherwise.
         guard let ref = expensesRef, let id = expense.id else {
             completion(.failure(DatabaseServiceError.missingId))
             return
@@ -122,8 +123,10 @@ final class DatabaseService {
 
     // MARK: - Helpers
 
+    // Parses a snapshot into expenses, sorted most-recent-first.
     private static func parseExpenses(from snapshot: DataSnapshot) -> [Expense] {
         var expenses: [Expense] = []
+        // Skip any child that fails to parse.
         for child in snapshot.children {
             guard let snap = child as? DataSnapshot,
                   let expense = Expense.from(snapshot: snap) else { continue }

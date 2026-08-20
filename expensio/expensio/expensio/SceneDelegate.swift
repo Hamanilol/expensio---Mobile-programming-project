@@ -13,18 +13,13 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         self.window = window
     }
 
-    /// Decides the app's starting screen based on the persisted session
-    /// (see AuthService — the "isLoggedIn" flag lives in UserDefaults per
-    /// the assessment brief, so returning users skip the login screen).
+    /// Skips straight to the tab bar if the user is already logged in.
     private func initialViewController() -> UIViewController {
         let storyboard = UIStoryboard(name: "Main", bundle: nil)
 
         if AuthService.shared.isLoggedIn {
-            // "MainTabBarController" matches the Storyboard ID set on the
-            // UITabBarController scene in Main.storyboard.
             return storyboard.instantiateViewController(withIdentifier: "MainTabBarController")
         } else {
-            // Falls back to the storyboard's own initial view controller (Login).
             return storyboard.instantiateInitialViewController()!
         }
     }

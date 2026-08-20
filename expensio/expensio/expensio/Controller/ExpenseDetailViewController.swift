@@ -1,28 +1,32 @@
 import UIKit
 
-/// Lets the presenting screen (Expenses list) know when this expense was
-/// changed or removed, matching the delegate pattern taught for
-/// cross-view-controller communication (see the Protocols lesson).
+// Notifies the presenting screen when this expense is changed or removed.
 protocol ExpenseDetailViewControllerDelegate: AnyObject {
     func expenseDetailViewController(_ controller: ExpenseDetailViewController, didUpdate expense: Expense)
     func expenseDetailViewController(_ controller: ExpenseDetailViewController, didDelete expense: Expense)
 }
 
-/// Shows the full details of a single expense (title, category, amount, date,
-/// receipt photo) with Edit and Delete actions.
+// Shows the full details of one expense, with Edit and Delete actions.
 class ExpenseDetailViewController: UIViewController {
 
     var expense: Expense!
     weak var delegate: ExpenseDetailViewControllerDelegate?
 
-    // MARK: - Outlets (wired in Main.storyboard, scene "ExpenseDetailVC")
+    // MARK: - Outlets
 
     @IBOutlet weak var receiptImageView: UIImageView!
-    @IBOutlet weak var amountLabel: UILabel!
+    @IBOutlet weak var receiptPlaceholderIcon: UIImageView!
+    @IBOutlet weak var receiptPlaceholderLabel: UILabel!
+
     @IBOutlet weak var titleLabel: UILabel!
     @IBOutlet weak var categoryBadgeView: UIView!
     @IBOutlet weak var categoryLabel: UILabel!
     @IBOutlet weak var dateLabel: UILabel!
+
+    @IBOutlet weak var amountLabel: UILabel!
+    @IBOutlet weak var categoryValueLabel: UILabel!
+    @IBOutlet weak var dateValueLabel: UILabel!
+    @IBOutlet weak var receiptValueLabel: UILabel!
 
     private static let dateFormatter: DateFormatter = {
         let f = DateFormatter()
@@ -39,40 +43,51 @@ class ExpenseDetailViewController: UIViewController {
 
     // MARK: - Populate
 
+    // Fills every label from `expense`.
     private func populateFields() {
-        amountLabel.text = String(format: "$%.2f", expense.amount)
         titleLabel.text = expense.title
-        dateLabel.text = Self.dateFormatter.string(from: expense.date)
 
+        // Category badge.
         let color = expense.category.accentColor
         let badgeText = expense.category.rawValue.capitalized
         categoryLabel.text = badgeText
         categoryLabel.textColor = color
         categoryBadgeView.backgroundColor = color.withAlphaComponent(0.18)
 
-        // Resize the badge to fit the text
+        // Resize the badge to fit the category name.
         let textW = (badgeText as NSString).size(withAttributes: [
             .font: UIFont.systemFont(ofSize: 13, weight: .semibold)
         ]).width + 24
         categoryBadgeView.frame.size.width = textW
         categoryLabel.frame.size.width = textW
 
+        let formattedDate = Self.dateFormatter.string(from: expense.date)
+        dateLabel.text = formattedDate
+
+        // Info card values.
+        amountLabel.text = String(format: "$%.2f", expense.amount)
+        categoryValueLabel.text = badgeText
+        dateValueLabel.text = formattedDate
+
+        // Receipt: load the image if there's a URL, otherwise show the placeholder.
         if let urlString = expense.receiptImageURL, let url = URL(string: urlString) {
+            receiptValueLabel.text = url.lastPathComponent
+            receiptPlaceholderIcon.isHidden = true
+            receiptPlaceholderLabel.isHidden = true
             loadReceiptImage(from: url)
         } else {
-            receiptImageView.image = UIImage(systemName: "photo")
-            receiptImageView.contentMode = .center
-            receiptImageView.tintColor = UIColor(red: 0.65, green: 0.68, blue: 0.75, alpha: 1)
+            receiptValueLabel.text = "None"
+            receiptImageView.image = nil
+            receiptPlaceholderIcon.isHidden = false
+            receiptPlaceholderLabel.isHidden = false
         }
     }
 
-    /// Simple URLSession-based image load — no third-party image caching
-    /// library, since we only ever load one image on this screen.
+    // Loads the receipt image via URLSession.
     private func loadReceiptImage(from url: URL) {
         URLSession.shared.dataTask(with: url) { [weak self] data, _, _ in
             guard let data, let image = UIImage(data: data) else { return }
             DispatchQueue.main.async {
-                self?.receiptImageView.contentMode = .scaleAspectFill
                 self?.receiptImageView.image = image
             }
         }.resume()
@@ -84,14 +99,16 @@ class ExpenseDetailViewController: UIViewController {
         dismiss(animated: true)
     }
 
+    // Passes the current expense to EditExpenseViewController before it appears.
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
         if segue.identifier == "EditExpense",
-           let addVC = segue.destination as? AddExpenseViewController {
-            addVC.expenseToEdit = expense
-            addVC.delegate = self
+           let editVC = segue.destination as? EditExpenseViewController {
+            editVC.expense = expense
+            editVC.delegate = self
         }
     }
 
+    // Confirms before deleting.
     @IBAction private func deleteTapped(_ sender: UIButton) {
         let alert = UIAlertController(
             title: "Delete Expense?",
@@ -125,13 +142,12 @@ class ExpenseDetailViewController: UIViewController {
     }
 }
 
-// MARK: - AddExpenseViewControllerDelegate
+// MARK: - EditExpenseViewControllerDelegate
 
-extension ExpenseDetailViewController: AddExpenseViewControllerDelegate {
+extension ExpenseDetailViewController: EditExpenseViewControllerDelegate {
 
-    /// Called after the Edit form saves successfully — refresh this screen's
-    /// own display and let the Expenses list know via our own delegate.
-    func addExpenseViewController(_ controller: AddExpenseViewController, didSave expense: Expense) {
+    // Refreshes this screen after an edit, then forwards the update to our own delegate.
+    func editExpenseViewController(_ controller: EditExpenseViewController, didSave expense: Expense) {
         self.expense = expense
         populateFields()
         delegate?.expenseDetailViewController(self, didUpdate: expense)
