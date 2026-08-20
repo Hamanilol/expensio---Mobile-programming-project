@@ -34,7 +34,7 @@ final class DatabaseService {
 
     // MARK: - Create
 
-    func addExpense(_ expense: Expense, completion: @escaping (Result<String, Error>) -> Void) {
+    func addExpense(_ expense: Expense, completion: @escaping (Result<String, Error>) -> Void) { //users/{uid}/expenses
         guard let ref = expensesRef else {
             completion(.failure(DatabaseServiceError.notAuthenticated))
             return

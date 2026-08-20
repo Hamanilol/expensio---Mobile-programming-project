@@ -683,6 +683,7 @@
                         <outlet property="searchTextField" destination="E-searchField" id="Ec6"/>
                         <outlet property="shoppingFilterButton" destination="E-filterShopping" id="Ec14"/>
                         <outlet property="totalSpentLabel" destination="E-totalAmount" id="Ec5"/>
+                        <outlet property="totalTitleLabel" destination="E-totalTitle" id="Ec17"/>
                         <outlet property="transportFilterButton" destination="E-filterTransport" id="Ec12"/>
                         <outlet property="userNameLabel" destination="E-userName" id="Ec2"/>
                         <segue destination="Dt1" kind="presentation" identifier="ShowExpenseDetail" modalPresentationStyle="fullScreen" id="E-seg2"/>

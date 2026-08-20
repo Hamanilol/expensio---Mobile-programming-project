@@ -8,6 +8,7 @@ class ExpensesViewController: UIViewController {
     @IBOutlet weak var dateLabel: UILabel!
     @IBOutlet weak var logoutButton: UIButton!
 
+    @IBOutlet weak var totalTitleLabel: UILabel!
     @IBOutlet weak var totalSpentLabel: UILabel!
 
     @IBOutlet weak var searchTextField: UITextField!
@@ -46,13 +47,20 @@ class ExpensesViewController: UIViewController {
         return formatter
     }()
 
+    // Used to turn a bare month number (1-12) into its name for the total's caption.
+    private static let monthNameFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMMM"
+        return formatter
+    }()
+
     override func viewDidLoad() {
         super.viewDidLoad()
         configureHeader()
         configureSearchField()
         addMissingCategoryChips()
         updateFilterButtonStyles()
-    }
+    } //databaseservice.shared.observeexpenses
 
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
@@ -237,14 +245,27 @@ class ExpensesViewController: UIViewController {
         updateTotalSpentLabel()
     }
 
-    // Total for the current calendar month, independent of any active filters.
+    // Total for whichever month is selected in the month filter row.
+    // "All" (selectedMonth == nil) sums every expense, regardless of month.
+    // Deliberately ignores the category/search filters — this is the overall spend total,
+    // not a filtered subtotal (the category breakdown lives on the Summary screen).
     private func updateTotalSpentLabel() {
-        let calendar = Calendar.current
-        let now = Date()
-        let monthTotal = allExpenses
-            .filter { calendar.isDate($0.date, equalTo: now, toGranularity: .month) }
-            .reduce(0) { $0 + $1.amount }
-        totalSpentLabel.text = String(format: "$%.2f", monthTotal)
+        let relevantExpenses: [Expense]
+        if let selectedMonth {
+            let calendar = Calendar.current
+            relevantExpenses = allExpenses.filter { calendar.component(.month, from: $0.date) == selectedMonth }
+        } else {
+            relevantExpenses = allExpenses
+        }
+        let total = relevantExpenses.reduce(0) { $0 + $1.amount }
+        totalSpentLabel.text = String(format: "$%.2f", total)
+
+        // Keep the caption above it truthful about what's being summed.
+        if let selectedMonth, let monthDate = Calendar.current.date(from: DateComponents(month: selectedMonth)) {
+            totalTitleLabel.text = "Total Spent · \(Self.monthNameFormatter.string(from: monthDate))"
+        } else {
+            totalTitleLabel.text = "Total Spent · All Time"
+        }
     }
 
     // MARK: - Actions

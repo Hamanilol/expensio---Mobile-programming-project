@@ -58,15 +58,19 @@ struct Expense: Codable, Identifiable {
         guard
             let data = snapshot.value as? [String: Any],
             let title = data["title"] as? String,
-            let amount = data["amount"] as? Double,
+            let amountNumber = data["amount"] as? NSNumber,
             let categoryRaw = data["category"] as? String,
             let category = ExpenseCategory(rawValue: categoryRaw),
-            let dateInterval = data["date"] as? Double
+            let dateNumber = data["date"] as? NSNumber
         else { return nil }
+
+
+        let amount = amountNumber.doubleValue
+        let dateInterval = dateNumber.doubleValue
 
         // Optional fields.
         let receiptImageURL = data["receiptImageURL"] as? String
-        let createdAtInterval = data["createdAt"] as? Double
+        let createdAtInterval = (data["createdAt"] as? NSNumber)?.doubleValue
 
         // Build the Expense, using the snapshot's key as the id.
         return Expense(
